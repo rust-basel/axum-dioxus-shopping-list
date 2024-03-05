@@ -1,0 +1,1 @@
+sh -c 'cd frontend && dx serve --hot-reload & cd backend && cargo run & wait'
