@@ -7,3 +7,8 @@ edition = "2021"
 
 [dependencies]
 model = { path = "../model" }
+serde = { version = "1.0.197" }
+serde_json = { version = "1.0.114" }
+
+axum = { version = "0.7.4" }
+tokio = { version = "1.36.0", features = ["full"] }

@@ -7,3 +7,9 @@ edition = "2021"
 
 [dependencies]
 model = { path = "../model" }
+serde = { version = "1.0.197" }
+serde_json = { version = "1.0.114" }
+
+dioxus = { version = "0.4.3" }
+dioxus-web = { version = "0.4.3"}
+reqwest = "0.11.24"
