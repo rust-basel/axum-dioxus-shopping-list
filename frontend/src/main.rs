@@ -13,10 +13,15 @@ fn App(cx: Scope) -> Element {
     match backend_data.value() {
         Some(Ok(items)) => {
             render! {
-                ul {
-                    for item in items {
-                        li {
-                           item.title.clone()
+                div {
+                    class: "grid h-screen place-items-center",
+                    ul { class: "menu bg-base-200 w-56 rounded-box",
+                        for item in items {
+                            li {
+                                a {
+                                   item.title.clone()
+                                }
+                            }
                         }
                     }
                 }

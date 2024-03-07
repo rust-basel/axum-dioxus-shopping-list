@@ -13,6 +13,10 @@ cargo install dioxus-cli
 rustup target add wasm32-unknown-unknown
 ```
 
+```shell
+pushd frontend && npm install && popd
+```
+
 After that, if you are on mac or linux, you should be able to start run the stack with
 
 ```shell
