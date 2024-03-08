@@ -17,3 +17,4 @@ Cargo.lock
 frontend/public
 frontend/dist
 frontend/node_modules
+/node_modules
