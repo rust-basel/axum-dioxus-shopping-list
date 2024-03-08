@@ -1,13 +1,16 @@
 #![allow(non_snake_case)]
 use dioxus::prelude::*;
-use model::ShoppingListItem;
+use model::{PostShopItem, ShoppingListItem};
 
 fn main() {
     dioxus_web::launch(App);
 }
 
-fn App(cx: Scope) -> Element {
+const fn items_url() -> &'static str {
+    "http://127.0.0.1:3000/items"
+}
 
+fn App(cx: Scope) -> Element {
     let backend_data = use_future(cx, (), |_| get_hello_world());
 
     render! {
@@ -38,6 +41,7 @@ fn App(cx: Scope) -> Element {
                         rsx! {"Loading world..."}
                     }
                 }
+                ItemInput{}
             }
         }
     }
@@ -45,42 +49,42 @@ fn App(cx: Scope) -> Element {
 
 #[derive(Props)]
 struct PureWrapProps<'a> {
-    children: Element<'a>
+    children: Element<'a>,
 }
-fn ThemeChooserLayout<'a>(cx: Scope<'a,PureWrapProps<'a>>) -> Element {
-    let mut active_theme = use_state(cx, || "dark");
+fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
+    let active_theme = use_state(cx, || "dark");
     let themes = vec![
-      "dark",
-      "cupcake",
-      "bumblebee",
-      "emerald",
-      "corporate",
-      "synthwave",
-      "retro",
-      "cyberpunk",
-      "valentine",
-      "halloween",
-      "garden",
-      "forest",
-      "aqua",
-      "lofi",
-      "pastel",
-      "fantasy",
-      "wireframe",
-      "black",
-      "luxury",
-      "dracula",
-      "cmyk",
-      "autumn",
-      "business",
-      "acid",
-      "lemonade",
-      "night",
-      "coffee",
-      "winter",
-      "dim",
-      "nord",
-      "sunset",
+        "dark",
+        "cupcake",
+        "bumblebee",
+        "emerald",
+        "corporate",
+        "synthwave",
+        "retro",
+        "cyberpunk",
+        "valentine",
+        "halloween",
+        "garden",
+        "forest",
+        "aqua",
+        "lofi",
+        "pastel",
+        "fantasy",
+        "wireframe",
+        "black",
+        "luxury",
+        "dracula",
+        "cmyk",
+        "autumn",
+        "business",
+        "acid",
+        "lemonade",
+        "night",
+        "coffee",
+        "winter",
+        "dim",
+        "nord",
+        "sunset",
     ];
     render! {
         div {
@@ -110,8 +114,67 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a,PureWrapProps<'a>>) -> Element {
     }
 }
 
+fn ItemInput(cx: Scope) -> Element {
+    let item = use_state(cx, || "".to_string());
+    let author = use_state(cx, || "".to_string());
+
+    let onsubmit = move |evt: FormEvent| {
+        cx.spawn(async move {
+            let item_name = evt.values["item_name"].first().cloned().unwrap_or_default();
+            let author = evt.values["author"].first().cloned().unwrap_or_default();
+            let _ = post_item(&PostShopItem {
+                title: item_name,
+                posted_by: author,
+            })
+            .await;
+        });
+    };
+
+    cx.render(rsx! {
+        div {
+            class: "w-56 m-6 rounded shadow",
+            form {
+                onsubmit: onsubmit,
+                input {
+                    value: "{item}",
+                    class: "input input-bordered input-primary w-full m-4",
+                    placeholder: "next item..",
+                    r#type: "text",
+                    id: "item_name",
+                    name: "item_name",
+                    oninput: move |e| item.set(e.value.clone())
+                }
+                input {
+                    value: "{author}",
+                    class: "input input-bordered input-primary w-full m-4",
+                    placeholder: "wanted by..",
+                    r#type: "text",
+                    id: "author",
+                    name: "author",
+                    oninput: move |e| author.set(e.value.clone())
+                }
+                button {
+                    class: "btn btn-primary w-full m-4",
+                    r#type: "submit",
+                    "Commit"
+                }
+            }
+        }
+    })
+}
+
+async fn post_item(item: &PostShopItem) -> Result<(), reqwest::Error> {
+    let client = reqwest::Client::new();
+    client
+        .post(items_url())
+        .json(item)
+        .send()
+        .await
+        .map(|_| Ok(()))?
+}
+
 async fn get_hello_world() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
-    let list = reqwest::get("http://127.0.0.1:3000")
+    let list = reqwest::get(items_url())
         .await?
         .json::<Vec<ShoppingListItem>>()
         .await;
