@@ -4,6 +4,7 @@ use axum::routing::post;
 use axum::Json;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
 use axum::http::HeaderMap;
@@ -15,8 +16,9 @@ use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
 async fn main() {
     let db = SharedData::default();
     let app = Router::new()
-        .route("/", get(handler))
+        .route("/items", get(handler))
         .route("/items", post(create_shopping_item))
+        .layer(CorsLayer::permissive())
         .with_state(db);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
@@ -26,14 +28,21 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn handler() -> impl IntoResponse {
-    let mut headers = HeaderMap::new();
-    headers.insert("Access-Control-Allow-Origin", "*".parse().unwrap()); // CORS allow-all for localhost development
+async fn handler(State(state): State<SharedData>) -> impl IntoResponse {
+    let mut result = example_list();
+    let mut other_items: Vec<ShoppingListItem> = state
+        .read()
+        .unwrap()
+        .db
+        .iter()
+        .map(|(_, shop_item)| ShoppingListItem {
+            title: shop_item.title.clone(),
+            posted_by: shop_item.creator.clone(),
+        })
+        .collect();
+    result.append(&mut other_items);
 
-    let result = example_list();
-    let serialized = serde_json::to_string(&result).unwrap();
-
-    (headers, serialized)
+    Json(result)
 }
 
 type SharedData = Arc<RwLock<InMemoryDatabase>>;
