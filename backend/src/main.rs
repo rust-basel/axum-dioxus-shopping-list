@@ -1,13 +1,11 @@
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::routing::post;
 use axum::Json;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use axum::{routing::get, Router};
 use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
@@ -16,8 +14,7 @@ use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
 async fn main() {
     let db = SharedData::default();
     let app = Router::new()
-        .route("/items", get(handler))
-        .route("/items", post(create_shopping_item))
+        .route("/items", get(handler).post(create_shopping_item))
         .layer(CorsLayer::permissive())
         .with_state(db);
 
