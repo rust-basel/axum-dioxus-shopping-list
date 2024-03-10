@@ -11,7 +11,7 @@ const fn items_url() -> &'static str {
 }
 
 fn App(cx: Scope) -> Element {
-    let backend_data = use_future(cx, (), |_| get_hello_world());
+    let backend_data = use_future(cx, (), |_| get_items());
 
     render! {
         ThemeChooserLayout{
@@ -26,8 +26,9 @@ fn App(cx: Scope) -> Element {
                                 ul { class: "menu bg-base-200 w-56 rounded-box",
                                     for item in items {
                                         li {
-                                            a {
-                                               item.title.clone()
+                                            ListItem{
+                                                display_name: item.title.clone(),
+                                                uuid: item.uuid.clone()
                                             }
                                         }
                                     }
@@ -45,6 +46,62 @@ fn App(cx: Scope) -> Element {
             }
         }
     }
+}
+
+#[derive(PartialEq, Props)]
+struct ItemProps {
+    display_name: String,
+    uuid: String,
+}
+
+fn ListItem(cx: Scope<ItemProps>) -> Element {
+    cx.render(rsx! {
+        div {
+            class: "flex items-center space-x-2",
+            p {
+                class: "grow",
+                "{cx.props.display_name}"
+            }
+            ItemDeleteButton{
+                uuid: cx.props.uuid.clone()
+            }
+        }
+    })
+}
+
+#[derive(PartialEq, Props)]
+struct ItemDeleteButtonProps {
+    uuid: String,
+}
+
+fn ItemDeleteButton(cx: Scope<ItemDeleteButtonProps>) -> Element {
+    let onclick = move |_| {
+        cx.spawn({
+            let uuid = cx.props.uuid.clone();
+            async move {
+                let _ = delete_item(uuid).await;
+            }
+        });
+    };
+
+    cx.render(rsx! {
+    button {
+        onclick: onclick,
+        class: "btn btn-circle",
+            svg {
+                class: "h-6 w-6 text-red",
+                view_box: "0 0 24 24",
+                stroke: "currentColor",
+                stroke_width: "2",
+                stroke_linecap: "round",
+                stroke_linejoin: "round",
+                fill: "none",
+                path {
+                    d: "M6 18L18 6M6 6l12 12"
+                }
+            }
+        }
+    })
 }
 
 #[derive(Props)]
@@ -163,6 +220,15 @@ fn ItemInput(cx: Scope) -> Element {
     })
 }
 
+async fn delete_item(item_uuid: String) -> Result<(), reqwest::Error> {
+    reqwest::Client::new()
+        .delete(&format!("{}/{}", items_url(), item_uuid))
+        .send()
+        .await?;
+
+    Ok(())
+}
+
 async fn post_item(item: &PostShopItem) -> Result<(), reqwest::Error> {
     let client = reqwest::Client::new();
     client
@@ -173,7 +239,7 @@ async fn post_item(item: &PostShopItem) -> Result<(), reqwest::Error> {
         .map(|_| Ok(()))?
 }
 
-async fn get_hello_world() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
+async fn get_items() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
     let list = reqwest::get(items_url())
         .await?
         .json::<Vec<ShoppingListItem>>()
