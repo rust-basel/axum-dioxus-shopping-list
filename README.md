@@ -42,7 +42,7 @@ Ctrl-C kills all three of these processes
 
 - [x] create items
 - [x] list items
-- [ ] delete items: having an e.g. trash icon
+- [x] delete items: having an e.g. trash icon
 - [ ] fake user profile (to introduce routing)
 - [ ] have unique shopping lists - identifified with an uuid? (So each list is unique)
 - [ ] share those lists: e.g. (have a load input field, where you enter the uuid/key/tiny-url?)

@@ -33,9 +33,10 @@ async fn handler(State(state): State<SharedData>) -> impl IntoResponse {
         .unwrap()
         .db
         .iter()
-        .map(|(_, shop_item)| ShoppingListItem {
+        .map(|(key, shop_item)| ShoppingListItem {
             title: shop_item.title.clone(),
             posted_by: shop_item.creator.clone(),
+            uuid: key.clone(),
         })
         .collect();
     result.append(&mut other_items);
@@ -69,10 +70,12 @@ fn example_list() -> Vec<ShoppingListItem> {
         ShoppingListItem {
             title: String::from("Coffee"),
             posted_by: String::from("Roland"),
+            uuid: Uuid::new_v4().to_string(),
         },
         ShoppingListItem {
             title: String::from("Tomato seeds"),
             posted_by: String::from("Tania"),
+            uuid: Uuid::new_v4().to_string(),
         },
     ]
 }
