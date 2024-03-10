@@ -19,6 +19,37 @@ enum Route {
     Profile {},
 }
 
+#[component]
+fn Profile(cx: Scope) -> Element {
+    render! {
+        ThemeChooserLayout{
+            div {
+            div {
+                class: "flex flex-col gap-4 w-52",
+                div {
+                    class: "flex gap-4 items-center",
+                    div {
+                        class: "skeleton w-16 h-16 rounded-full shrink-0"
+                    }
+                    div {
+                        class: "flex flex-col hap-4",
+                        div {
+                            class: "skeleton h-4 w-20"
+                        }
+                        div {
+                            class: "skeleton h-4 w-28"
+                        }
+                    }
+                }
+                div {
+                    class: "skeleton h-32 w-full"
+                }
+            }}
+        }
+    }
+}
+
+#[component]
 fn Home(cx: Scope) -> Element {
     let backend_data = use_future(cx, (), |_| get_items());
 
@@ -252,35 +283,6 @@ fn ItemInput(cx: Scope) -> Element {
             }
         }
     })
-}
-
-fn Profile(cx: Scope) -> Element {
-    render! {
-        ThemeChooserLayout{
-            div {
-            div {
-                class: "flex flex-col gap-4 w-52",
-                div {
-                    class: "flex gap-4 items-center",
-                    div {
-                        class: "skeleton w-16 h-16 rounded-full shrink-0"
-                    }
-                    div {
-                        class: "flex flex-col hap-4",
-                        div {
-                            class: "skeleton h-4 w-20"
-                        }
-                        div {
-                            class: "skeleton h-4 w-28"
-                        }
-                    }
-                }
-                div {
-                    class: "skeleton h-32 w-full"
-                }
-            }}
-        }
-    }
 }
 
 async fn delete_item(item_uuid: String) -> Result<(), reqwest::Error> {
