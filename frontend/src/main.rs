@@ -230,13 +230,13 @@ async fn delete_item(item_uuid: String) -> Result<(), reqwest::Error> {
 }
 
 async fn post_item(item: &PostShopItem) -> Result<(), reqwest::Error> {
-    let client = reqwest::Client::new();
-    client
+    reqwest::Client::new()
         .post(items_url())
         .json(item)
         .send()
-        .await
-        .map(|_| Ok(()))?
+        .await?;
+
+    Ok(())
 }
 
 async fn get_items() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
@@ -244,5 +244,6 @@ async fn get_items() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
         .await?
         .json::<Vec<ShoppingListItem>>()
         .await;
+
     list
 }
