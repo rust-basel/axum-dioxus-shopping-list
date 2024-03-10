@@ -1,4 +1,4 @@
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
 use axum::response::IntoResponse;
-use axum::{routing::get, Router};
+use axum::{routing::delete, routing::get, Router};
 use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
 
 #[tokio::main]
@@ -15,6 +15,7 @@ async fn main() {
     let db = SharedData::default();
     let app = Router::new()
         .route("/items", get(handler).post(create_shopping_item))
+        .route("/items/:uuid", delete(delete_shopping_item))
         .layer(CorsLayer::permissive())
         .with_state(db);
 
@@ -74,6 +75,15 @@ fn example_list() -> Vec<ShoppingListItem> {
             posted_by: String::from("Tania"),
         },
     ]
+}
+
+pub async fn delete_shopping_item(
+    Path(uuid): Path<Uuid>,
+    State(state): State<SharedData>,
+) -> impl IntoResponse {
+    state.write().unwrap().db.remove(&uuid.to_string());
+
+    StatusCode::NO_CONTENT
 }
 
 pub async fn create_shopping_item(
