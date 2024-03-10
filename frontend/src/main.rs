@@ -143,14 +143,24 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
         "nord",
         "sunset",
     ];
+
+    const HOME_TEXT: &str = "Home";
+    const PROFILE_TEXT: &str = "Profile";
     render! {
         div {
             class: "min-h-screen",
             "data-theme": "{active_theme}",
             div {
                 class: "navbar bg-base-100",
-                div { class: "flex-none",
-                    ul { class: "menu menu-horizontal px-1",
+                div {
+                    class: "flex-1",
+                    button {
+                        class: "btn btn-ghost text-xl",
+                        {HOME_TEXT}
+                    }
+                }
+                div { class: "flex-none gap-2",
+                    ul { class: "menu menu-horizontal px-8",
                         li {
                             details {
                                 summary {
@@ -163,6 +173,10 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
                                 }
                             }
                         }
+                    }
+                    button {
+                        class: "btn",
+                        {PROFILE_TEXT}
                     }
                 }
             }
