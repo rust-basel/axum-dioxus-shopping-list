@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use dioxus::prelude::*;
+use dioxus_router::prelude::*;
 use model::{PostShopItem, ShoppingListItem};
 
 fn main() {
@@ -10,7 +11,15 @@ const fn items_url() -> &'static str {
     "http://127.0.0.1:3000/items"
 }
 
-fn App(cx: Scope) -> Element {
+#[derive(Routable, Clone)]
+enum Route {
+    #[route("/")]
+    Home {},
+    #[route("/profile")]
+    Profile {},
+}
+
+fn Home(cx: Scope) -> Element {
     let backend_data = use_future(cx, (), |_| get_items());
 
     render! {
@@ -45,6 +54,12 @@ fn App(cx: Scope) -> Element {
                 ItemInput{}
             }
         }
+    }
+}
+
+fn App(cx: Scope) -> Element {
+    render! {
+        Router::<Route>{}
     }
 }
 
@@ -156,7 +171,9 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
                     class: "flex-1",
                     button {
                         class: "btn btn-ghost text-xl",
-                        {HOME_TEXT}
+                        Link {
+                            to: Route::Home{}, {HOME_TEXT}
+                        }
                     }
                 }
                 div { class: "flex-none gap-2",
@@ -176,12 +193,15 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
                     }
                     button {
                         class: "btn",
-                        {PROFILE_TEXT}
+                        Link {
+                            to: Route::Profile{}, {PROFILE_TEXT}
+                        }
                     }
                 }
             }
             &cx.props.children
         }
+        Outlet::<Route>{}
     }
 }
 
@@ -232,6 +252,35 @@ fn ItemInput(cx: Scope) -> Element {
             }
         }
     })
+}
+
+fn Profile(cx: Scope) -> Element {
+    render! {
+        ThemeChooserLayout{
+            div {
+            div {
+                class: "flex flex-col gap-4 w-52",
+                div {
+                    class: "flex gap-4 items-center",
+                    div {
+                        class: "skeleton w-16 h-16 rounded-full shrink-0"
+                    }
+                    div {
+                        class: "flex flex-col hap-4",
+                        div {
+                            class: "skeleton h-4 w-20"
+                        }
+                        div {
+                            class: "skeleton h-4 w-28"
+                        }
+                    }
+                }
+                div {
+                    class: "skeleton h-32 w-full"
+                }
+            }}
+        }
+    }
 }
 
 async fn delete_item(item_uuid: String) -> Result<(), reqwest::Error> {
