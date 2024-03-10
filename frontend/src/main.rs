@@ -132,12 +132,12 @@ fn ItemInput(cx: Scope) -> Element {
 
     cx.render(rsx! {
         div {
-            class: "w-56 m-6 rounded shadow",
+            class: "w-56 m-4 rounded shadow",
             form {
                 onsubmit: onsubmit,
                 input {
                     value: "{item}",
-                    class: "input input-bordered input-primary w-full m-4",
+                    class: "input input-bordered input-primary w-full",
                     placeholder: "next item..",
                     r#type: "text",
                     id: "item_name",
@@ -146,7 +146,7 @@ fn ItemInput(cx: Scope) -> Element {
                 }
                 input {
                     value: "{author}",
-                    class: "input input-bordered input-primary w-full m-4",
+                    class: "input input-bordered input-primary w-full",
                     placeholder: "wanted by..",
                     r#type: "text",
                     id: "author",
@@ -154,7 +154,7 @@ fn ItemInput(cx: Scope) -> Element {
                     oninput: move |e| author.set(e.value.clone())
                 }
                 button {
-                    class: "btn btn-primary w-full m-4",
+                    class: "btn btn-primary w-full",
                     r#type: "submit",
                     "Commit"
                 }
