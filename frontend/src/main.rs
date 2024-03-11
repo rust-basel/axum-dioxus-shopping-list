@@ -83,6 +83,7 @@ fn Home(cx: Scope) -> Element {
                                     ListItem {
                                         display_name: v.title.clone(),
                                         uuid: k.clone(),
+                                        current_items: displayed_data
                                     }
                                 }
                             }
@@ -104,12 +105,13 @@ fn App(cx: Scope) -> Element {
 }
 
 #[derive(PartialEq, Props)]
-struct ItemProps {
+struct ItemProps<'a> {
     display_name: String,
     uuid: String,
+    current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
-fn ListItem(cx: Scope<ItemProps>) -> Element {
+fn ListItem<'a>(cx: Scope<'a, ItemProps<'a>>) -> Element {
     cx.render(rsx! {
         div {
             class: "flex items-center space-x-2",
@@ -118,23 +120,29 @@ fn ListItem(cx: Scope<ItemProps>) -> Element {
                 "{cx.props.display_name}"
             }
             ItemDeleteButton{
-                uuid: cx.props.uuid.clone()
+                uuid: cx.props.uuid.clone(),
+                current_items: cx.props.current_items
             }
         }
     })
 }
 
 #[derive(PartialEq, Props)]
-struct ItemDeleteButtonProps {
+struct ItemDeleteButtonProps<'a> {
     uuid: String,
+    current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
-fn ItemDeleteButton(cx: Scope<ItemDeleteButtonProps>) -> Element {
+fn ItemDeleteButton<'a>(cx: Scope<'a, ItemDeleteButtonProps<'a>>) -> Element {
     let onclick = move |_| {
         cx.spawn({
             let uuid = cx.props.uuid.clone();
+            let current_items = cx.props.current_items.clone();
             async move {
-                let _ = delete_item(uuid).await;
+                let response = delete_item(&uuid).await;
+                if response.is_ok() {
+                    current_items.write().remove(&uuid);
+                }
             }
         });
     };
@@ -313,7 +321,7 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
     })
 }
 
-async fn delete_item(item_uuid: String) -> Result<(), reqwest::Error> {
+async fn delete_item(item_uuid: &str) -> Result<(), reqwest::Error> {
     reqwest::Client::new()
         .delete(&format!("{}/{}", items_url(), item_uuid))
         .send()
