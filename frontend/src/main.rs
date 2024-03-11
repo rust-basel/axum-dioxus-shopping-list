@@ -80,6 +80,7 @@ fn Home(cx: Scope) -> Element {
                         displayed_data.read().iter().map(|(k,v)| {
                             rsx!{
                                 li {
+                                    key: "{k}",
                                     ListItem {
                                         display_name: v.title.clone(),
                                         uuid: k.clone(),
