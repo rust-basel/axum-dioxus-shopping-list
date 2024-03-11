@@ -70,12 +70,12 @@ fn example_list() -> Vec<ShoppingListItem> {
         ShoppingListItem {
             title: String::from("Coffee"),
             posted_by: String::from("Roland"),
-            uuid: Uuid::new_v4().to_string(),
+            uuid: "6a363dc3-b34c-43e3-8ea0-919b25b57c43".to_string(),
         },
         ShoppingListItem {
             title: String::from("Tomato seeds"),
             posted_by: String::from("Tania"),
-            uuid: Uuid::new_v4().to_string(),
+            uuid: "4e5548aa-4525-45c4-82c9-61d8919f940d".to_string(),
         },
     ]
 }

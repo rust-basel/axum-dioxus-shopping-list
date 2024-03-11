@@ -1,7 +1,9 @@
 #![allow(non_snake_case)]
+use std::collections::HashMap;
+
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
-use model::{PostShopItem, ShoppingListItem};
+use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
 
 fn main() {
     dioxus_web::launch(App);
@@ -51,7 +53,19 @@ fn Profile(cx: Scope) -> Element {
 
 #[component]
 fn Home(cx: Scope) -> Element {
-    let backend_data = use_future(cx, (), |_| get_items());
+    let displayed_data = use_ref(cx, || HashMap::<String, ShoppingListItem>::new());
+
+    cx.spawn({
+        let items = displayed_data.clone();
+        async move {
+            let fetched_items = get_items().await;
+            if let Ok(fetched_items) = fetched_items {
+                for i in fetched_items {
+                    items.write().insert(i.uuid.clone(), i.clone());
+                }
+            }
+        }
+    });
 
     render! {
         ThemeChooserLayout{
@@ -60,29 +74,24 @@ fn Home(cx: Scope) -> Element {
                 h1 { class: "m-16 text-4xl font-bold leading-none tracking-tight",
                     "Hello, shopping list!"
                 }
-                match backend_data.value() {
-                    Some(Ok(items)) => {
-                        rsx! {
-                                ul { class: "menu bg-base-200 w-56 rounded-box",
-                                    for item in items {
-                                        li {
-                                            ListItem{
-                                                display_name: item.title.clone(),
-                                                uuid: item.uuid.clone()
-                                            }
-                                        }
+                rsx!{
+                    ul {
+                        class: "menu bg-base-200 w-56 rounded-box",
+                        displayed_data.read().iter().map(|(k,v)| {
+                            rsx!{
+                                li {
+                                    ListItem {
+                                        display_name: v.title.clone(),
+                                        uuid: k.clone(),
                                     }
                                 }
-                        }
-                    }
-                    Some(Err(err)) => {
-                        rsx! {"An error occured while fetching from backend: {err}"}
-                    }
-                    None => {
-                        rsx! {"Loading world..."}
+                            }
+                        })
                     }
                 }
-                ItemInput{}
+                ItemInput{
+                    current_items: displayed_data
+                }
             }
         }
     }
@@ -236,19 +245,38 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
     }
 }
 
-fn ItemInput(cx: Scope) -> Element {
+#[derive(Props, PartialEq)]
+struct ItemInputProps<'a> {
+    current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
+}
+
+fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
     let item = use_state(cx, || "".to_string());
     let author = use_state(cx, || "".to_string());
 
     let onsubmit = move |evt: FormEvent| {
-        cx.spawn(async move {
-            let item_name = evt.values["item_name"].first().cloned().unwrap_or_default();
-            let author = evt.values["author"].first().cloned().unwrap_or_default();
-            let _ = post_item(&PostShopItem {
-                title: item_name,
-                posted_by: author,
-            })
-            .await;
+        cx.spawn({
+            let current_items = cx.props.current_items.clone();
+            async move {
+                let item_name = evt.values["item_name"].first().cloned().unwrap_or_default();
+                let author = evt.values["author"].first().cloned().unwrap_or_default();
+                let response = post_item(&PostShopItem {
+                    title: item_name,
+                    posted_by: author,
+                })
+                .await;
+
+                if let Ok(response) = response {
+                    current_items.write().insert(
+                        response.id.to_string(),
+                        ShoppingListItem {
+                            title: response.title,
+                            posted_by: response.posted_by,
+                            uuid: response.id,
+                        },
+                    );
+                }
+            }
         });
     };
 
@@ -294,14 +322,16 @@ async fn delete_item(item_uuid: String) -> Result<(), reqwest::Error> {
     Ok(())
 }
 
-async fn post_item(item: &PostShopItem) -> Result<(), reqwest::Error> {
-    reqwest::Client::new()
+async fn post_item(item: &PostShopItem) -> Result<PostShopItemResponse, reqwest::Error> {
+    let response = reqwest::Client::new()
         .post(items_url())
         .json(item)
         .send()
+        .await?
+        .json::<PostShopItemResponse>()
         .await?;
 
-    Ok(())
+    Ok(response)
 }
 
 async fn get_items() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
