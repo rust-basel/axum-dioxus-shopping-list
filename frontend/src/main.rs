@@ -55,7 +55,7 @@ fn Profile(cx: Scope) -> Element {
 fn Home(cx: Scope) -> Element {
     let displayed_data = use_ref(cx, || HashMap::<String, ShoppingListItem>::new());
 
-    use_effect(cx, (), |_|{
+    use_effect(cx, (), |_| {
         let items = displayed_data.clone();
         async move {
             let fetched_items = get_items().await;
@@ -291,7 +291,7 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
 
     cx.render(rsx! {
         div {
-            class: "w-56 m-4 rounded shadow",
+            class: "w-56 m-4 rounded",
             form {
                 onsubmit: onsubmit,
                 input {
