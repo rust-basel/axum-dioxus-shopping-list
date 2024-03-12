@@ -55,7 +55,7 @@ fn Profile(cx: Scope) -> Element {
 fn Home(cx: Scope) -> Element {
     let displayed_data = use_ref(cx, || HashMap::<String, ShoppingListItem>::new());
 
-    cx.spawn({
+    use_effect(cx, (), |_|{
         let items = displayed_data.clone();
         async move {
             let fetched_items = get_items().await;
