@@ -143,8 +143,7 @@ fn example_list() -> Vec<ShoppingListItem> {
 }
 
 pub async fn delete_shopping_item(
-    Path(list_uuid): Path<Uuid>,
-    Path(item_uuid): Path<Uuid>,
+    Path((list_uuid, item_uuid)): Path<(Uuid, Uuid)>,
     State(state): State<SharedData>,
 ) -> impl IntoResponse {
     state

@@ -17,6 +17,10 @@ const fn list_url() -> &'static str {
     "http://127.0.0.1:3000/list"
 }
 
+fn delete_item_url(list_uuid: &str, item_uuid: &str) -> String {
+    format!("{}/{}", items_url(list_uuid), item_uuid)
+}
+
 #[derive(Routable, Clone)]
 enum Route {
     #[route("/")]
@@ -411,7 +415,7 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
 
 async fn delete_item(list_uuid: &str, item_uuid: &str) -> Result<(), reqwest::Error> {
     reqwest::Client::new()
-        .delete(&format!("{}/{}", items_url(list_uuid), item_uuid))
+        .delete(&delete_item_url(list_uuid, item_uuid))
         .send()
         .await?;
 
@@ -451,4 +455,22 @@ async fn get_items(list_uuid: &str) -> Result<Vec<ShoppingListItem>, reqwest::Er
         .await;
 
     list
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::delete_item_url;
+
+    #[test]
+    fn delete_url_given_both_uuids_then_creates_correct_url() {
+        // given
+        let uuid_1 = "A";
+        let uuid_2 = "B";
+
+        // when
+        let url = delete_item_url(uuid_1, uuid_2);
+
+        // then
+        assert_eq!(url, "http://127.0.0.1:3000/list/A/items/B");
+    }
 }
