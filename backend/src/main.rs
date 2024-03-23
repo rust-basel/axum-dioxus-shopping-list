@@ -8,12 +8,13 @@ use uuid::Uuid;
 
 use axum::response::IntoResponse;
 use axum::{routing::delete, routing::get, Router};
-use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
+use model::{CreateListResponse, PostShopItem, PostShopItemResponse, ShoppingListItem};
 
 #[tokio::main]
 async fn main() {
     let db = SharedData::default();
     let app = Router::new()
+        .route("/list", get(create_shopping_list))
         .route(
             "/list/:uuid/items",
             get(get_items).post(create_shopping_item),
@@ -142,8 +143,7 @@ fn example_list() -> Vec<ShoppingListItem> {
 }
 
 pub async fn delete_shopping_item(
-    Path(list_uuid): Path<Uuid>,
-    Path(item_uuid): Path<Uuid>,
+    Path((list_uuid, item_uuid)): Path<(Uuid, Uuid)>,
     State(state): State<SharedData>,
 ) -> impl IntoResponse {
     state
@@ -152,6 +152,13 @@ pub async fn delete_shopping_item(
         .delete_item(list_uuid.to_string(), item_uuid.to_string());
 
     StatusCode::NO_CONTENT
+}
+
+pub async fn create_shopping_list(State(state): State<SharedData>) -> impl IntoResponse {
+    let uuid = Uuid::new_v4().to_string();
+    state.write().unwrap().create_list(uuid.clone());
+
+    Json(CreateListResponse { id: uuid })
 }
 
 pub async fn create_shopping_item(

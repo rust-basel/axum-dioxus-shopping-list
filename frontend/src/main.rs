@@ -3,20 +3,30 @@ use std::collections::HashMap;
 
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
-use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
+use model::{CreateListResponse, PostShopItem, PostShopItemResponse, ShoppingListItem};
 
 fn main() {
     dioxus_web::launch(App);
 }
 
-const fn items_url() -> &'static str {
-    "http://127.0.0.1:3000/list/9e137e61-08ac-469d-be9d-6b3324dd20ad/items"
+fn items_url(list_uuid: &str) -> String {
+    format!("{}/{}/items", list_url(), list_uuid)
+}
+
+const fn list_url() -> &'static str {
+    "http://127.0.0.1:3000/list"
+}
+
+fn delete_item_url(list_uuid: &str, item_uuid: &str) -> String {
+    format!("{}/{}", items_url(list_uuid), item_uuid)
 }
 
 #[derive(Routable, Clone)]
 enum Route {
     #[route("/")]
-    Home {},
+    LoadOrCreateList {},
+    #[route("/list/:uuid")]
+    ShoppingList { uuid: String },
     #[route("/profile")]
     Profile {},
 }
@@ -50,15 +60,81 @@ fn Profile(cx: Scope) -> Element {
         }
     }
 }
+#[component]
+fn LoadOrCreateList(cx: Scope) -> Element {
+    let uuid = use_state(cx, || "9e137e61-08ac-469d-be9d-6b3324dd20ad".to_string());
+    let nav = use_navigator(cx);
+    let onloadsubmit = move |evt: FormEvent| {
+        cx.spawn({
+            let nav = nav.clone();
+            async move {
+                let uuid_value = evt.values["uuid"].first().cloned().unwrap_or_default();
+                if !uuid_value.is_empty() {
+                    nav.push(Route::ShoppingList { uuid: uuid_value });
+                }
+            }
+        });
+    };
+
+    let on_create_list_click = move |_| {
+        let nav = nav.clone();
+        cx.spawn({
+            async move {
+                let response = create_list().await;
+                if let Ok(created_list) = response {
+                    nav.push(Route::ShoppingList {
+                        uuid: created_list.id,
+                    });
+                }
+            }
+        });
+    };
+
+    cx.render(rsx! {
+        ThemeChooserLayout{
+            div{
+                class: "grid place-items-center min-h-500",
+                div{
+                    class: "flex justify-content",
+                    button{
+                        class: "btn m-4",
+                        onclick: on_create_list_click,
+                        "Create new List"
+                    }
+                    form {
+                        onsubmit: onloadsubmit,
+                        div {
+                            class: "flex flex-col",
+                            button{
+                                class: "btn m-4",
+                                r#type: "submit",
+                                "Load existing List"
+                            }
+                            input{
+                                class:"input input-bordered",
+                                r#type:"text",
+                                placeholder:"Type here the uuid",
+                                id: "uuid",
+                                name: "uuid",
+                                oninput: move |e| uuid.set(e.value.clone())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
+}
 
 #[component]
-fn Home(cx: Scope) -> Element {
+fn ShoppingList(cx: Scope, uuid: String) -> Element {
     let displayed_data = use_ref(cx, || HashMap::<String, ShoppingListItem>::new());
 
     use_effect(cx, (), |_| {
         let items = displayed_data.clone();
+        let uuid = uuid.clone();
         async move {
-            let fetched_items = get_items().await;
+            let fetched_items = get_items(&uuid).await;
             if let Ok(fetched_items) = fetched_items {
                 for i in fetched_items {
                     items.write().insert(i.uuid.clone(), i.clone());
@@ -71,8 +147,12 @@ fn Home(cx: Scope) -> Element {
         ThemeChooserLayout{
             div {
                 class: "grid place-items-center min-h-500",
-                h1 { class: "m-16 text-4xl font-bold leading-none tracking-tight",
-                    "Hello, shopping list!"
+                h1 { class: "m-16 text-xl font-bold leading-none tracking-tight",
+                    "Hello, shopping list"
+                }
+                p{
+                    class: "text-xl",
+                    "{uuid.clone()}"
                 }
                 rsx!{
                     ul {
@@ -83,7 +163,8 @@ fn Home(cx: Scope) -> Element {
                                     key: "{k}",
                                     ListItem {
                                         display_name: v.title.clone(),
-                                        uuid: k.clone(),
+                                        list_uuid: uuid.clone(),
+                                        item_uuid: k.clone(),
                                         current_items: displayed_data
                                     }
                                 }
@@ -92,6 +173,7 @@ fn Home(cx: Scope) -> Element {
                     }
                 }
                 ItemInput{
+                    list_uuid: uuid.clone(),
                     current_items: displayed_data
                 }
             }
@@ -108,7 +190,8 @@ fn App(cx: Scope) -> Element {
 #[derive(PartialEq, Props)]
 struct ItemProps<'a> {
     display_name: String,
-    uuid: String,
+    list_uuid: String,
+    item_uuid: String,
     current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
@@ -121,7 +204,8 @@ fn ListItem<'a>(cx: Scope<'a, ItemProps<'a>>) -> Element {
                 "{cx.props.display_name}"
             }
             ItemDeleteButton{
-                uuid: cx.props.uuid.clone(),
+                list_uuid: cx.props.list_uuid.to_string(),
+                item_uuid: cx.props.item_uuid.to_string(),
                 current_items: cx.props.current_items
             }
         }
@@ -130,19 +214,21 @@ fn ListItem<'a>(cx: Scope<'a, ItemProps<'a>>) -> Element {
 
 #[derive(PartialEq, Props)]
 struct ItemDeleteButtonProps<'a> {
-    uuid: String,
+    list_uuid: String,
+    item_uuid: String,
     current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
 fn ItemDeleteButton<'a>(cx: Scope<'a, ItemDeleteButtonProps<'a>>) -> Element {
     let onclick = move |_| {
         cx.spawn({
-            let uuid = cx.props.uuid.clone();
+            let item_uuid = cx.props.item_uuid.clone();
+            let list_uuid = cx.props.list_uuid.clone();
             let current_items = cx.props.current_items.clone();
             async move {
-                let response = delete_item(&uuid).await;
+                let response = delete_item(&list_uuid, &item_uuid).await;
                 if response.is_ok() {
-                    current_items.write().remove(&uuid);
+                    current_items.write().remove(&item_uuid);
                 }
             }
         });
@@ -221,7 +307,7 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
                     button {
                         class: "btn btn-ghost text-xl",
                         Link {
-                            to: Route::Home{}, {HOME_TEXT}
+                            to: Route::LoadOrCreateList{}, {HOME_TEXT}
                         }
                     }
                 }
@@ -256,6 +342,7 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
 
 #[derive(Props, PartialEq)]
 struct ItemInputProps<'a> {
+    list_uuid: String,
     current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
@@ -265,14 +352,18 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
 
     let onsubmit = move |evt: FormEvent| {
         cx.spawn({
+            let list_uuid = cx.props.list_uuid.clone();
             let current_items = cx.props.current_items.clone();
             async move {
                 let item_name = evt.values["item_name"].first().cloned().unwrap_or_default();
                 let author = evt.values["author"].first().cloned().unwrap_or_default();
-                let response = post_item(&PostShopItem {
-                    title: item_name,
-                    posted_by: author,
-                })
+                let response = post_item(
+                    &list_uuid,
+                    &PostShopItem {
+                        title: item_name,
+                        posted_by: author,
+                    },
+                )
                 .await;
 
                 if let Ok(response) = response {
@@ -322,18 +413,21 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
     })
 }
 
-async fn delete_item(item_uuid: &str) -> Result<(), reqwest::Error> {
+async fn delete_item(list_uuid: &str, item_uuid: &str) -> Result<(), reqwest::Error> {
     reqwest::Client::new()
-        .delete(&format!("{}/{}", items_url(), item_uuid))
+        .delete(&delete_item_url(list_uuid, item_uuid))
         .send()
         .await?;
 
     Ok(())
 }
 
-async fn post_item(item: &PostShopItem) -> Result<PostShopItemResponse, reqwest::Error> {
+async fn post_item(
+    list_uuid: &str,
+    item: &PostShopItem,
+) -> Result<PostShopItemResponse, reqwest::Error> {
     let response = reqwest::Client::new()
-        .post(items_url())
+        .post(items_url(list_uuid))
         .json(item)
         .send()
         .await?
@@ -343,11 +437,40 @@ async fn post_item(item: &PostShopItem) -> Result<PostShopItemResponse, reqwest:
     Ok(response)
 }
 
-async fn get_items() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
-    let list = reqwest::get(items_url())
+async fn create_list() -> Result<CreateListResponse, reqwest::Error> {
+    let response = reqwest::Client::new()
+        .get(list_url())
+        .send()
+        .await?
+        .json::<CreateListResponse>()
+        .await?;
+
+    Ok(response)
+}
+
+async fn get_items(list_uuid: &str) -> Result<Vec<ShoppingListItem>, reqwest::Error> {
+    let list = reqwest::get(items_url(list_uuid))
         .await?
         .json::<Vec<ShoppingListItem>>()
         .await;
 
     list
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::delete_item_url;
+
+    #[test]
+    fn delete_url_given_both_uuids_then_creates_correct_url() {
+        // given
+        let uuid_1 = "A";
+        let uuid_2 = "B";
+
+        // when
+        let url = delete_item_url(uuid_1, uuid_2);
+
+        // then
+        assert_eq!(url, "http://127.0.0.1:3000/list/A/items/B");
+    }
 }
