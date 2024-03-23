@@ -3,14 +3,18 @@ use std::collections::HashMap;
 
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
-use model::{PostShopItem, PostShopItemResponse, ShoppingListItem};
+use model::{CreateListResponse, PostShopItem, PostShopItemResponse, ShoppingListItem};
 
 fn main() {
     dioxus_web::launch(App);
 }
 
 fn items_url(list_uuid: &str) -> String {
-    format!("http://127.0.0.1:3000/list/{}/items", list_uuid)
+    format!("{}/{}/items", list_url(), list_uuid)
+}
+
+const fn list_url() -> &'static str {
+    "http://127.0.0.1:3000/list"
 }
 
 #[derive(Routable, Clone)]
@@ -61,12 +65,9 @@ fn LoadOrCreateList(cx: Scope) -> Element {
             let nav = nav.clone();
             async move {
                 let uuid_value = evt.values["uuid"].first().cloned().unwrap_or_default();
-                // load list with given uuid
-
-                // if response ok - then route to /list/:uuid
-                nav.push(Route::ShoppingList {
-                    uuid: "9e137e61-08ac-469d-be9d-6b3324dd20ad".to_string(),
-                });
+                if !uuid_value.is_empty() {
+                    nav.push(Route::ShoppingList { uuid: uuid_value });
+                }
             }
         });
     };
@@ -75,12 +76,12 @@ fn LoadOrCreateList(cx: Scope) -> Element {
         let nav = nav.clone();
         cx.spawn({
             async move {
-                // make a post with new list -> receive an uuid
-
-                // if response ok - then route to /list/:uuid
-                nav.push(Route::ShoppingList {
-                    uuid: "9e137e61-08ac-469d-be9d-6b3324dd20ad".to_string(),
-                });
+                let response = create_list().await;
+                if let Ok(created_list) = response {
+                    nav.push(Route::ShoppingList {
+                        uuid: created_list.id,
+                    });
+                }
             }
         });
     };
@@ -142,8 +143,12 @@ fn ShoppingList(cx: Scope, uuid: String) -> Element {
         ThemeChooserLayout{
             div {
                 class: "grid place-items-center min-h-500",
-                h1 { class: "m-16 text-4xl font-bold leading-none tracking-tight",
-                    "Hello, shopping list!"
+                h1 { class: "m-16 text-xl font-bold leading-none tracking-tight",
+                    "Hello, shopping list"
+                }
+                p{
+                    class: "text-xl",
+                    "{uuid.clone()}"
                 }
                 rsx!{
                     ul {
@@ -423,6 +428,17 @@ async fn post_item(
         .send()
         .await?
         .json::<PostShopItemResponse>()
+        .await?;
+
+    Ok(response)
+}
+
+async fn create_list() -> Result<CreateListResponse, reqwest::Error> {
+    let response = reqwest::Client::new()
+        .get(list_url())
+        .send()
+        .await?
+        .json::<CreateListResponse>()
         .await?;
 
     Ok(response)
