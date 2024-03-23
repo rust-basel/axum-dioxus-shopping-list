@@ -9,8 +9,8 @@ fn main() {
     dioxus_web::launch(App);
 }
 
-const fn items_url() -> &'static str {
-    "http://127.0.0.1:3000/list/9e137e61-08ac-469d-be9d-6b3324dd20ad/items"
+fn items_url(list_uuid: &str) -> String {
+    format!("http://127.0.0.1:3000/list/{}/items", list_uuid)
 }
 
 #[derive(Routable, Clone)]
@@ -127,8 +127,9 @@ fn ShoppingList(cx: Scope, uuid: String) -> Element {
 
     use_effect(cx, (), |_| {
         let items = displayed_data.clone();
+        let uuid = uuid.clone();
         async move {
-            let fetched_items = get_items().await;
+            let fetched_items = get_items(&uuid).await;
             if let Ok(fetched_items) = fetched_items {
                 for i in fetched_items {
                     items.write().insert(i.uuid.clone(), i.clone());
@@ -153,7 +154,8 @@ fn ShoppingList(cx: Scope, uuid: String) -> Element {
                                     key: "{k}",
                                     ListItem {
                                         display_name: v.title.clone(),
-                                        uuid: k.clone(),
+                                        list_uuid: uuid.clone(),
+                                        item_uuid: k.clone(),
                                         current_items: displayed_data
                                     }
                                 }
@@ -162,6 +164,7 @@ fn ShoppingList(cx: Scope, uuid: String) -> Element {
                     }
                 }
                 ItemInput{
+                    list_uuid: uuid.clone(),
                     current_items: displayed_data
                 }
             }
@@ -178,7 +181,8 @@ fn App(cx: Scope) -> Element {
 #[derive(PartialEq, Props)]
 struct ItemProps<'a> {
     display_name: String,
-    uuid: String,
+    list_uuid: String,
+    item_uuid: String,
     current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
@@ -191,7 +195,8 @@ fn ListItem<'a>(cx: Scope<'a, ItemProps<'a>>) -> Element {
                 "{cx.props.display_name}"
             }
             ItemDeleteButton{
-                uuid: cx.props.uuid.clone(),
+                list_uuid: cx.props.list_uuid.to_string(),
+                item_uuid: cx.props.item_uuid.to_string(),
                 current_items: cx.props.current_items
             }
         }
@@ -200,19 +205,21 @@ fn ListItem<'a>(cx: Scope<'a, ItemProps<'a>>) -> Element {
 
 #[derive(PartialEq, Props)]
 struct ItemDeleteButtonProps<'a> {
-    uuid: String,
+    list_uuid: String,
+    item_uuid: String,
     current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
 fn ItemDeleteButton<'a>(cx: Scope<'a, ItemDeleteButtonProps<'a>>) -> Element {
     let onclick = move |_| {
         cx.spawn({
-            let uuid = cx.props.uuid.clone();
+            let item_uuid = cx.props.item_uuid.clone();
+            let list_uuid = cx.props.list_uuid.clone();
             let current_items = cx.props.current_items.clone();
             async move {
-                let response = delete_item(&uuid).await;
+                let response = delete_item(&list_uuid, &item_uuid).await;
                 if response.is_ok() {
-                    current_items.write().remove(&uuid);
+                    current_items.write().remove(&item_uuid);
                 }
             }
         });
@@ -326,6 +333,7 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
 
 #[derive(Props, PartialEq)]
 struct ItemInputProps<'a> {
+    list_uuid: String,
     current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
 
@@ -335,14 +343,18 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
 
     let onsubmit = move |evt: FormEvent| {
         cx.spawn({
+            let list_uuid = cx.props.list_uuid.clone();
             let current_items = cx.props.current_items.clone();
             async move {
                 let item_name = evt.values["item_name"].first().cloned().unwrap_or_default();
                 let author = evt.values["author"].first().cloned().unwrap_or_default();
-                let response = post_item(&PostShopItem {
-                    title: item_name,
-                    posted_by: author,
-                })
+                let response = post_item(
+                    &list_uuid,
+                    &PostShopItem {
+                        title: item_name,
+                        posted_by: author,
+                    },
+                )
                 .await;
 
                 if let Ok(response) = response {
@@ -392,18 +404,21 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
     })
 }
 
-async fn delete_item(item_uuid: &str) -> Result<(), reqwest::Error> {
+async fn delete_item(list_uuid: &str, item_uuid: &str) -> Result<(), reqwest::Error> {
     reqwest::Client::new()
-        .delete(&format!("{}/{}", items_url(), item_uuid))
+        .delete(&format!("{}/{}", items_url(list_uuid), item_uuid))
         .send()
         .await?;
 
     Ok(())
 }
 
-async fn post_item(item: &PostShopItem) -> Result<PostShopItemResponse, reqwest::Error> {
+async fn post_item(
+    list_uuid: &str,
+    item: &PostShopItem,
+) -> Result<PostShopItemResponse, reqwest::Error> {
     let response = reqwest::Client::new()
-        .post(items_url())
+        .post(items_url(list_uuid))
         .json(item)
         .send()
         .await?
@@ -413,8 +428,8 @@ async fn post_item(item: &PostShopItem) -> Result<PostShopItemResponse, reqwest:
     Ok(response)
 }
 
-async fn get_items() -> Result<Vec<ShoppingListItem>, reqwest::Error> {
-    let list = reqwest::get(items_url())
+async fn get_items(list_uuid: &str) -> Result<Vec<ShoppingListItem>, reqwest::Error> {
+    let list = reqwest::get(items_url(list_uuid))
         .await?
         .json::<Vec<ShoppingListItem>>()
         .await;
