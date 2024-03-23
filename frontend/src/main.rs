@@ -17,8 +17,8 @@ const fn items_url() -> &'static str {
 enum Route {
     #[route("/")]
     LoadOrCreateList {},
-    #[route("/list")]
-    Home {},
+    #[route("/list/:uuid")]
+    ShoppingList { uuid: String },
     #[route("/profile")]
     Profile {},
 }
@@ -64,7 +64,9 @@ fn LoadOrCreateList(cx: Scope) -> Element {
                 // load list with given uuid
 
                 // if response ok - then route to /list/:uuid
-                nav.push(Route::Home {});
+                nav.push(Route::ShoppingList {
+                    uuid: "9e137e61-08ac-469d-be9d-6b3324dd20ad".to_string(),
+                });
             }
         });
     };
@@ -76,7 +78,9 @@ fn LoadOrCreateList(cx: Scope) -> Element {
                 // make a post with new list -> receive an uuid
 
                 // if response ok - then route to /list/:uuid
-                nav.push(Route::Home {});
+                nav.push(Route::ShoppingList {
+                    uuid: "9e137e61-08ac-469d-be9d-6b3324dd20ad".to_string(),
+                });
             }
         });
     };
@@ -118,7 +122,7 @@ fn LoadOrCreateList(cx: Scope) -> Element {
 }
 
 #[component]
-fn Home(cx: Scope) -> Element {
+fn ShoppingList(cx: Scope, uuid: String) -> Element {
     let displayed_data = use_ref(cx, || HashMap::<String, ShoppingListItem>::new());
 
     use_effect(cx, (), |_| {
@@ -287,7 +291,7 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
                     button {
                         class: "btn btn-ghost text-xl",
                         Link {
-                            to: Route::Home{}, {HOME_TEXT}
+                            to: Route::LoadOrCreateList{}, {HOME_TEXT}
                         }
                     }
                 }
