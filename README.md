@@ -47,5 +47,5 @@ Ctrl-C kills all three of these processes
 - [x] have unique shopping lists - identifified with an uuid? (So each list is unique)
 - [x] share those lists: e.g. (have a load input field, where you enter the uuid/key/tiny-url?)
 - [x] When entering the page: decide to create a new list - or to load one
-- [ ] cleanup
-- [ ] creates modules: e.g. backend: database/handlers/models/, frontend: components/requests/...
+- [x] (modules)backend: database/handlers/models/ 
+- [ ] (modules)frontend: components/requests/...
