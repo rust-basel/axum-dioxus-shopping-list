@@ -76,13 +76,14 @@ fn Home(cx: Scope) -> Element {
                 }
                 rsx!{
                     ul {
-                        class: "menu bg-base-200 w-56 rounded-box",
+                        class: "menu bg-base-200 w-200 rounded-box gap-1",
                         displayed_data.read().iter().map(|(k,v)| {
                             rsx!{
                                 li {
                                     key: "{k}",
                                     ListItem {
                                         display_name: v.title.clone(),
+                                        posted_by: v.posted_by.clone(),
                                         uuid: k.clone(),
                                         current_items: displayed_data
                                     }
@@ -108,6 +109,7 @@ fn App(cx: Scope) -> Element {
 #[derive(PartialEq, Props)]
 struct ItemProps<'a> {
     display_name: String,
+    posted_by: String,
     uuid: String,
     current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
 }
@@ -117,8 +119,11 @@ fn ListItem<'a>(cx: Scope<'a, ItemProps<'a>>) -> Element {
         div {
             class: "flex items-center space-x-2",
             p {
-                class: "grow",
+                class: "grow text-2xl",
                 "{cx.props.display_name}"
+            }
+            span {
+                "posted by {cx.props.posted_by}"
             }
             ItemDeleteButton{
                 uuid: cx.props.uuid.clone(),
@@ -291,26 +296,30 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
 
     cx.render(rsx! {
         div {
-            class: "w-56 m-4 rounded",
-            form {
+            class: "w-300 m-4 mt-16 rounded",
+            form { class: "grid grid-cols-3 gap-2",
                 onsubmit: onsubmit,
-                input {
-                    value: "{item}",
-                    class: "input input-bordered input-primary w-full",
-                    placeholder: "next item..",
-                    r#type: "text",
-                    id: "item_name",
-                    name: "item_name",
-                    oninput: move |e| item.set(e.value.clone())
+                div {
+                    input {
+                        value: "{item}",
+                        class: "input input-bordered input-primary w-full",
+                        placeholder: "next item..",
+                        r#type: "text",
+                        id: "item_name",
+                        name: "item_name",
+                        oninput: move |e| item.set(e.value.clone())
+                    }
                 }
-                input {
-                    value: "{author}",
-                    class: "input input-bordered input-primary w-full",
-                    placeholder: "wanted by..",
-                    r#type: "text",
-                    id: "author",
-                    name: "author",
-                    oninput: move |e| author.set(e.value.clone())
+                div {
+                    input {
+                        value: "{author}",
+                        class: "input input-bordered input-primary w-full",
+                        placeholder: "wanted by..",
+                        r#type: "text",
+                        id: "author",
+                        name: "author",
+                        oninput: move |e| author.set(e.value.clone())
+                    }
                 }
                 button {
                     class: "btn btn-primary w-full",

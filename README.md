@@ -47,3 +47,7 @@ Ctrl-C kills all three of these processes
 - [ ] have unique shopping lists - identifified with an uuid? (So each list is unique)
 - [ ] share those lists: e.g. (have a load input field, where you enter the uuid/key/tiny-url?)
 - [ ] When entering the page: decide to create a new list - or to load one
+- [ ] Use layout attr instead of wrapping component
+- [ ] Optional: SeaORM
+- [ ] Layout details
+- [ ] Rethink file structure
