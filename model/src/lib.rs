@@ -19,3 +19,8 @@ pub struct PostShopItemResponse {
     pub title: String,
     pub posted_by: String,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct CreateListResponse {
+    pub id: String,
+}
