@@ -6,7 +6,7 @@ you need the dioxus-cli crate installed for its cargo wrapper `dx`,
 as well as cargo-make and the `wasm32-unknown-unknown` target.
 
 ```shell
-cargo install dioxus-cli
+cargo install dioxus-cli --locked
 ```
 
 ```shell
