@@ -1,12 +1,15 @@
 #![allow(non_snake_case)]
+
 use std::collections::HashMap;
+use std::thread::Scope;
 
 use dioxus::prelude::*;
-use dioxus_router::prelude::*;
 use model::{CreateListResponse, PostShopItem, PostShopItemResponse, ShoppingListItem};
 
+const _STYLE: &str = manganis::mg!(file("public/tailwind.css"));
+
 fn main() {
-    dioxus_web::launch(App);
+    launch(app);
 }
 
 fn items_url(list_uuid: &str) -> String {
@@ -32,8 +35,8 @@ enum Route {
 }
 
 #[component]
-fn Profile(cx: Scope) -> Element {
-    render! {
+fn Profile() -> Element {
+    rsx! {
         ThemeChooserLayout{
             div {
             div {
@@ -60,15 +63,16 @@ fn Profile(cx: Scope) -> Element {
         }
     }
 }
+
 #[component]
-fn LoadOrCreateList(cx: Scope) -> Element {
-    let uuid = use_state(cx, || "9e137e61-08ac-469d-be9d-6b3324dd20ad".to_string());
-    let nav = use_navigator(cx);
+fn LoadOrCreateList() -> Element {
+    let mut uuid = use_signal(|| "9e137e61-08ac-469d-be9d-6b3324dd20ad".to_string());
+    let nav = use_navigator();
     let onloadsubmit = move |evt: FormEvent| {
-        cx.spawn({
-            let nav = nav.clone();
+        spawn({
+            // let nav = nav.clone();
             async move {
-                let uuid_value = evt.values["uuid"].first().cloned().unwrap_or_default();
+                let uuid_value = evt.data.values()["uuid"].first().cloned().unwrap_or_default();
                 if !uuid_value.is_empty() {
                     nav.push(Route::ShoppingList { uuid: uuid_value });
                 }
@@ -78,7 +82,7 @@ fn LoadOrCreateList(cx: Scope) -> Element {
 
     let on_create_list_click = move |_| {
         let nav = nav.clone();
-        cx.spawn({
+        spawn({
             async move {
                 let response = create_list().await;
                 if let Ok(created_list) = response {
@@ -90,7 +94,7 @@ fn LoadOrCreateList(cx: Scope) -> Element {
         });
     };
 
-    cx.render(rsx! {
+    rsx! {
         ThemeChooserLayout{
             div{
                 class: "grid place-items-center min-h-500",
@@ -116,62 +120,55 @@ fn LoadOrCreateList(cx: Scope) -> Element {
                                 placeholder:"Type here the uuid",
                                 id: "uuid",
                                 name: "uuid",
-                                oninput: move |e| uuid.set(e.value.clone())
+                                oninput: move |e| uuid.set(e.data.value())
                             }
                         }
                     }
                 }
             }
         }
-    })
+    }
 }
 
 #[component]
-fn ShoppingList(cx: Scope, uuid: String) -> Element {
-    let displayed_data = use_ref(cx, || HashMap::<String, ShoppingListItem>::new());
+fn ShoppingList(uuid: String) -> Element {
+    let displayed_data = use_signal(|| HashMap::<String, ShoppingListItem>::new());
 
-    use_effect(cx, (), |_| {
-        let items = displayed_data.clone();
-        let uuid = uuid.clone();
-        async move {
-            let fetched_items = get_items(&uuid).await;
-            if let Ok(fetched_items) = fetched_items {
-                for i in fetched_items {
-                    items.write().insert(i.uuid.clone(), i.clone());
-                }
-            }
-        }
-    });
+    // use_effect(move || {
+    //     async move {
+    //         let fetched_items = get_items(&uuid).await;
+    //         if let Ok(fetched_items) = fetched_items {
+    //             for i in fetched_items {
+    //                 items().insert(i.uuid.clone(), i.clone());
+    //             }
+    //         }
+    //     }
+    // });
 
-    render! {
+    rsx! {
         ThemeChooserLayout{
-            div {
-                class: "grid place-items-center min-h-500",
+            div { class: "grid place-items-center min-h-500",
                 h1 { class: "m-16 text-xl font-bold leading-none tracking-tight",
                     "Hello, shopping list"
                 }
-                p{
-                    class: "text-xl",
+                p{ class: "text-xl",
                     "{uuid.clone()}"
                 }
-                rsx!{
-                    ul {
-                        class: "menu bg-base-200 w-200 rounded-box gap-1",
-                        displayed_data.read().iter().map(|(k,v)| {
-                            rsx!{
-                                li {
-                                    key: "{k}",
-                                    ListItem {
-                                        display_name: v.title.clone(),
-                                        posted_by: v.posted_by.clone(),
-                                        list_uuid: uuid.clone(),
-                                        item_uuid: k.clone(),
-                                        current_items: displayed_data
-                                    }
+                ul { class: "menu bg-base-200 w-200 rounded-box gap-1",
+                    { displayed_data().iter().map(|(k,v)| {
+                        rsx!{
+                            li {
+                                key: "{k}",
+                                ListItem {
+                                    display_name: v.title.clone(),
+                                    posted_by: v.posted_by.clone(),
+                                    list_uuid: uuid.clone(),
+                                    item_uuid: k.clone(),
+                                    current_items: displayed_data
                                 }
                             }
-                        })
-                    }
+                        }
+                    })}
                 }
                 ItemInput{
                     list_uuid: uuid.clone(),
@@ -182,64 +179,66 @@ fn ShoppingList(cx: Scope, uuid: String) -> Element {
     }
 }
 
-fn App(cx: Scope) -> Element {
-    render! {
+fn app() -> Element {
+    rsx! {
         Router::<Route>{}
     }
 }
 
-#[derive(PartialEq, Props)]
-struct ItemProps<'a> {
+#[derive(PartialEq, Props, Clone)]
+struct ItemProps {
     display_name: String,
     list_uuid: String,
     item_uuid: String,
     posted_by: String,
-    current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
+    current_items: Signal<HashMap<String, ShoppingListItem>>,
 }
 
-fn ListItem<'a>(cx: Scope<'a, ItemProps<'a>>) -> Element {
-    cx.render(rsx! {
+fn ListItem(props: ItemProps) -> Element {
+    rsx! {
         div {
             class: "flex items-center space-x-2",
             p {
                 class: "grow text-2xl",
-                "{cx.props.display_name}"
+                "{props.display_name}"
             }
             span {
-                "posted by {cx.props.posted_by}"
+                "posted by {props.posted_by}"
             }
             ItemDeleteButton{
-                list_uuid: cx.props.list_uuid.to_string(),
-                item_uuid: cx.props.item_uuid.to_string(),
-                current_items: cx.props.current_items
+                list_uuid: props.list_uuid.to_string(),
+                item_uuid: props.item_uuid.to_string(),
+                current_items: props.current_items
             }
         }
-    })
+    }
 }
 
-#[derive(PartialEq, Props)]
-struct ItemDeleteButtonProps<'a> {
+
+#[derive(Props, Clone, PartialEq)]
+struct ItemDeleteButtonProps {
     list_uuid: String,
     item_uuid: String,
-    current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
+    current_items: Signal<HashMap<String, ShoppingListItem>>,
 }
 
-fn ItemDeleteButton<'a>(cx: Scope<'a, ItemDeleteButtonProps<'a>>) -> Element {
+#[component]
+fn ItemDeleteButton(props: ItemDeleteButtonProps) -> Element {
     let onclick = move |_| {
-        cx.spawn({
-            let item_uuid = cx.props.item_uuid.clone();
-            let list_uuid = cx.props.list_uuid.clone();
-            let current_items = cx.props.current_items.clone();
+        spawn({
+            let item_uuid = props.item_uuid.clone();
+            let list_uuid = props.list_uuid.clone();
+            let current_items = props.current_items.clone();
             async move {
                 let response = delete_item(&list_uuid, &item_uuid).await;
                 if response.is_ok() {
-                    current_items.write().remove(&item_uuid);
+                    current_items().remove(&item_uuid);
                 }
             }
         });
     };
 
-    cx.render(rsx! {
+    rsx! {
     button {
         onclick: onclick,
         class: "btn btn-circle",
@@ -256,15 +255,17 @@ fn ItemDeleteButton<'a>(cx: Scope<'a, ItemDeleteButtonProps<'a>>) -> Element {
                 }
             }
         }
-    })
+    }
 }
 
-#[derive(Props)]
-struct PureWrapProps<'a> {
-    children: Element<'a>,
+#[derive(Props, Clone, PartialEq)]
+struct WrapperProps{
+    children: Element
 }
-fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
-    let active_theme = use_state(cx, || "dark");
+
+#[component]
+fn ThemeChooserLayout(props: WrapperProps) -> Element {
+    let mut active_theme = use_signal(|| "dark");
     let themes = vec![
         "dark",
         "cupcake",
@@ -301,10 +302,11 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
 
     const HOME_TEXT: &str = "Home";
     const PROFILE_TEXT: &str = "Profile";
-    render! {
+
+    rsx! {
         div {
             class: "min-h-screen",
-            "data-theme": "{active_theme}",
+            r#"data-theme"#: "{active_theme}",
             div {
                 class: "navbar bg-base-100",
                 div {
@@ -339,29 +341,30 @@ fn ThemeChooserLayout<'a>(cx: Scope<'a, PureWrapProps<'a>>) -> Element {
                     }
                 }
             }
-            &cx.props.children
+            {props.children}
+            // &children
         }
         Outlet::<Route>{}
     }
 }
 
-#[derive(Props, PartialEq)]
-struct ItemInputProps<'a> {
+#[derive(Props, Clone, PartialEq)]
+struct ItemInputProps {
     list_uuid: String,
-    current_items: &'a UseRef<HashMap<String, ShoppingListItem>>,
+    current_items: Signal<HashMap<String, ShoppingListItem>>,
 }
 
-fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
-    let item = use_state(cx, || "".to_string());
-    let author = use_state(cx, || "".to_string());
+fn ItemInput(props: ItemInputProps) -> Element {
+    let mut item = use_signal(|| "".to_string());
+    let mut author = use_signal(|| "".to_string());
 
     let onsubmit = move |evt: FormEvent| {
-        cx.spawn({
-            let list_uuid = cx.props.list_uuid.clone();
-            let current_items = cx.props.current_items.clone();
+        spawn({
+            let list_uuid = props.list_uuid.clone();
+            let current_items = props.current_items.clone();
             async move {
-                let item_name = evt.values["item_name"].first().cloned().unwrap_or_default();
-                let author = evt.values["author"].first().cloned().unwrap_or_default();
+                let item_name = evt.data.values()["item_name"].first().cloned().unwrap_or_default();
+                let author = evt.data.values()["author"].first().cloned().unwrap_or_default();
                 let response = post_item(
                     &list_uuid,
                     &PostShopItem {
@@ -369,10 +372,10 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
                         posted_by: author,
                     },
                 )
-                .await;
+                    .await;
 
                 if let Ok(response) = response {
-                    current_items.write().insert(
+                    current_items().insert(
                         response.id.to_string(),
                         ShoppingListItem {
                             title: response.title,
@@ -385,7 +388,7 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
         });
     };
 
-    cx.render(rsx! {
+    rsx! {
         div {
             class: "w-300 m-4 mt-16 rounded",
             form { class: "grid grid-cols-3 gap-2",
@@ -398,7 +401,7 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
                         r#type: "text",
                         id: "item_name",
                         name: "item_name",
-                        oninput: move |e| item.set(e.value.clone())
+                        oninput: move |e| item.set(e.data.value().clone())
                     }
                 }
                 div {
@@ -409,7 +412,7 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
                         r#type: "text",
                         id: "author",
                         name: "author",
-                        oninput: move |e| author.set(e.value.clone())
+                        oninput: move |e| author.set(e.data.value().clone())
                     }
                 }
                 button {
@@ -419,7 +422,7 @@ fn ItemInput<'a>(cx: Scope<'a, ItemInputProps<'a>>) -> Element {
                 }
             }
         }
-    })
+    }
 }
 
 async fn delete_item(list_uuid: &str, item_uuid: &str) -> Result<(), reqwest::Error> {
