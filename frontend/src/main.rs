@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
 use std::collections::HashMap;
-use std::thread::Scope;
 
 use dioxus::prelude::*;
 use model::{CreateListResponse, PostShopItem, PostShopItemResponse, ShoppingListItem};
@@ -70,9 +69,11 @@ fn LoadOrCreateList() -> Element {
     let nav = use_navigator();
     let onloadsubmit = move |evt: FormEvent| {
         spawn({
-            // let nav = nav.clone();
             async move {
-                let uuid_value = evt.data.values()["uuid"].first().cloned().unwrap_or_default();
+                let uuid_value = evt.data.values()["uuid"]
+                    .first()
+                    .cloned()
+                    .unwrap_or_default();
                 if !uuid_value.is_empty() {
                     nav.push(Route::ShoppingList { uuid: uuid_value });
                 }
@@ -131,19 +132,42 @@ fn LoadOrCreateList() -> Element {
 }
 
 #[component]
-fn ShoppingList(uuid: String) -> Element {
-    let displayed_data = use_signal(|| HashMap::<String, ShoppingListItem>::new());
+fn ShoppingListDisplay(list: Signal<HashMap<String, ShoppingListItem>>, uuid: String) -> Element {
+    rsx! {
+        {
+        list().iter().map(|(k,v)| {
+            rsx!{
+                li {
+                    key: "{k}",
+                    ListItem {
+                        display_name: v.title.clone(),
+                        posted_by: v.posted_by.clone(),
+                        list_uuid: uuid.clone(),
+                        item_uuid: k.clone(),
+                        current_items: list.clone()
+                    }
+                }
+            }
+        })
+        }
+    }
+}
 
-    // use_effect(move || {
-    //     async move {
-    //         let fetched_items = get_items(&uuid).await;
-    //         if let Ok(fetched_items) = fetched_items {
-    //             for i in fetched_items {
-    //                 items().insert(i.uuid.clone(), i.clone());
-    //             }
-    //         }
-    //     }
-    // });
+#[component]
+fn ShoppingList(uuid: String) -> Element {
+    let mut displayed_data = use_signal(HashMap::<String, ShoppingListItem>::new);
+    let uuid_signal = use_signal(|| uuid.clone());
+
+    let future = use_resource(move || async move { get_items(&uuid_signal()).await });
+
+    match &*future.read_unchecked() {
+        Some(Ok(list)) => {
+            for i in list {
+                displayed_data.write().insert(i.uuid.clone(), i.clone());
+            }
+        }
+        _ => {}
+    }
 
     rsx! {
         ThemeChooserLayout{
@@ -155,20 +179,7 @@ fn ShoppingList(uuid: String) -> Element {
                     "{uuid.clone()}"
                 }
                 ul { class: "menu bg-base-200 w-200 rounded-box gap-1",
-                    { displayed_data().iter().map(|(k,v)| {
-                        rsx!{
-                            li {
-                                key: "{k}",
-                                ListItem {
-                                    display_name: v.title.clone(),
-                                    posted_by: v.posted_by.clone(),
-                                    list_uuid: uuid.clone(),
-                                    item_uuid: k.clone(),
-                                    current_items: displayed_data
-                                }
-                            }
-                        }
-                    })}
+                    ShoppingListDisplay{list: displayed_data, uuid: uuid.clone()}
                 }
                 ItemInput{
                     list_uuid: uuid.clone(),
@@ -185,54 +196,47 @@ fn app() -> Element {
     }
 }
 
-#[derive(PartialEq, Props, Clone)]
-struct ItemProps {
+#[component]
+fn ListItem(
     display_name: String,
     list_uuid: String,
     item_uuid: String,
     posted_by: String,
     current_items: Signal<HashMap<String, ShoppingListItem>>,
-}
-
-fn ListItem(props: ItemProps) -> Element {
+) -> Element {
     rsx! {
         div {
             class: "flex items-center space-x-2",
             p {
                 class: "grow text-2xl",
-                "{props.display_name}"
+                "{display_name}"
             }
             span {
-                "posted by {props.posted_by}"
+                "posted by {posted_by}"
             }
             ItemDeleteButton{
-                list_uuid: props.list_uuid.to_string(),
-                item_uuid: props.item_uuid.to_string(),
-                current_items: props.current_items
+                list_uuid,
+                item_uuid,
+                current_items
             }
         }
     }
 }
 
-
-#[derive(Props, Clone, PartialEq)]
-struct ItemDeleteButtonProps {
+#[component]
+fn ItemDeleteButton(
     list_uuid: String,
     item_uuid: String,
-    current_items: Signal<HashMap<String, ShoppingListItem>>,
-}
-
-#[component]
-fn ItemDeleteButton(props: ItemDeleteButtonProps) -> Element {
+    mut current_items: Signal<HashMap<String, ShoppingListItem>>,
+) -> Element {
     let onclick = move |_| {
         spawn({
-            let item_uuid = props.item_uuid.clone();
-            let list_uuid = props.list_uuid.clone();
-            let current_items = props.current_items.clone();
+            let item_uuid = item_uuid.clone();
+            let list_uuid = list_uuid.clone();
             async move {
                 let response = delete_item(&list_uuid, &item_uuid).await;
                 if response.is_ok() {
-                    current_items().remove(&item_uuid);
+                    current_items.write().remove(&item_uuid);
                 }
             }
         });
@@ -259,8 +263,8 @@ fn ItemDeleteButton(props: ItemDeleteButtonProps) -> Element {
 }
 
 #[derive(Props, Clone, PartialEq)]
-struct WrapperProps{
-    children: Element
+struct WrapperProps {
+    children: Element,
 }
 
 #[component]
@@ -342,29 +346,31 @@ fn ThemeChooserLayout(props: WrapperProps) -> Element {
                 }
             }
             {props.children}
-            // &children
         }
         Outlet::<Route>{}
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-struct ItemInputProps {
+#[component]
+fn ItemInput(
     list_uuid: String,
-    current_items: Signal<HashMap<String, ShoppingListItem>>,
-}
-
-fn ItemInput(props: ItemInputProps) -> Element {
+    mut current_items: Signal<HashMap<String, ShoppingListItem>>,
+) -> Element {
     let mut item = use_signal(|| "".to_string());
     let mut author = use_signal(|| "".to_string());
 
     let onsubmit = move |evt: FormEvent| {
         spawn({
-            let list_uuid = props.list_uuid.clone();
-            let current_items = props.current_items.clone();
+            let list_uuid = list_uuid.clone();
             async move {
-                let item_name = evt.data.values()["item_name"].first().cloned().unwrap_or_default();
-                let author = evt.data.values()["author"].first().cloned().unwrap_or_default();
+                let item_name = evt.data.values()["item_name"]
+                    .first()
+                    .cloned()
+                    .unwrap_or_default();
+                let author = evt.data.values()["author"]
+                    .first()
+                    .cloned()
+                    .unwrap_or_default();
                 let response = post_item(
                     &list_uuid,
                     &PostShopItem {
@@ -372,10 +378,10 @@ fn ItemInput(props: ItemInputProps) -> Element {
                         posted_by: author,
                     },
                 )
-                    .await;
+                .await;
 
                 if let Ok(response) = response {
-                    current_items().insert(
+                    current_items.write().insert(
                         response.id.to_string(),
                         ShoppingListItem {
                             title: response.title,
