@@ -173,9 +173,6 @@ fn ShoppingList(uuid: String) -> Element {
         ThemeChooserLayout{
             div { class: "grid place-items-center min-h-500",
                 h1 { class: "m-16 text-xl font-bold leading-none tracking-tight",
-                    "Hello, shopping list"
-                }
-                p{ class: "text-xl",
                     "{uuid.clone()}"
                 }
                 ul { class: "menu bg-base-200 w-200 rounded-box gap-1",
