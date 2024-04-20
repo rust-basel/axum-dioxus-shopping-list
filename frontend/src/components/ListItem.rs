@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use dioxus::core_macro::{component, rsx};
-use dioxus::dioxus_core::Element;
 use dioxus::prelude::*;
 use model::ShoppingListItem;
 use crate::components::ItemDeleteButton::ItemDeleteButton;

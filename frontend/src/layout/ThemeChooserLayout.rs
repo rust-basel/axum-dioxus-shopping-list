@@ -7,7 +7,7 @@ pub struct WrapperProps {
 }
 #[component]
 pub fn ThemeChooserLayout(props: WrapperProps) -> Element {
-    let mut active_theme = use_signal(|| "dark");
+    let mut active_theme = use_signal(|| "sunset");
     let themes = vec![
         "dark",
         "cupcake",
@@ -42,26 +42,26 @@ pub fn ThemeChooserLayout(props: WrapperProps) -> Element {
         "sunset",
     ];
 
-    const HOME_TEXT: &str = "Home";
+    const HOME_TEXT: &str = "My Lists";
     const PROFILE_TEXT: &str = "Profile";
 
     rsx! {
         div {
-            class: "min-h-screen",
+            class: "min-h-screen bg-gradient-to-r from-primary to-accent",
             r#"data-theme"#: "{active_theme}",
             div {
-                class: "navbar bg-base-100",
+                class: "navbar glass flex",
                 div {
-                    class: "flex-1",
-                    button {
-                        class: "btn btn-ghost text-xl",
-                        Link {
-                            to: Route::LoadOrCreateList{}, {HOME_TEXT}
-                        }
+                    class: "flex-1 flex flex-row gap-4 p-4",
+                    Link { class: "text-primary-content hover:text-secondary",
+                        to: Route::LoadOrCreateList{}, {HOME_TEXT}
+                    }
+                    Link { class: "text-primary-content hover:text-secondary",
+                        to: Route::Profile{}, {PROFILE_TEXT}
                     }
                 }
                 div { class: "flex-none gap-2",
-                    ul { class: "menu menu-horizontal px-8",
+                    ul { class: "menu menu-horizontal px-8 text-sm z-10",
                         li {
                             details {
                                 summary {
@@ -69,22 +69,18 @@ pub fn ThemeChooserLayout(props: WrapperProps) -> Element {
                                 }
                                 ul { class: "bg-base-100 rounded-t-none",
                                     for theme in themes {
-                                        li { a { onclick: move |_| active_theme.set(theme), {theme} } }
+                                        li { a { onclick: move |evt| active_theme.set(theme), {theme} } }
                                     }
                                 }
                             }
                         }
                     }
-                    button {
-                        class: "btn",
-                        Link {
-                            to: Route::Profile{}, {PROFILE_TEXT}
-                        }
-                    }
                 }
             }
-            {props.children}
+            div { class: "container mx-auto max-w-[1024px] p-8",
+                Outlet::<Route>{}
+                {props.children}
+            }
         }
-        Outlet::<Route>{}
     }
 }

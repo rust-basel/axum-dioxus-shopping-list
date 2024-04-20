@@ -1,13 +1,11 @@
 use dioxus::prelude::*;
-use crate::layout::ThemeChooserLayout::ThemeChooserLayout;
 
 #[component]
 pub fn Profile() -> Element {
     rsx! {
-        ThemeChooserLayout{
+        div {
             div {
-            div {
-                class: "flex flex-col gap-4 w-52",
+                class: "flex flex-col gap-4 w-full",
                 div {
                     class: "flex gap-4 items-center",
                     div {
@@ -26,7 +24,10 @@ pub fn Profile() -> Element {
                 div {
                     class: "skeleton h-32 w-full"
                 }
-            }}
+                div {
+                    class: "skeleton h-32 w-full"
+                }
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use dioxus::prelude::*;
 use model::{CreateListResponse, PostShopItem, PostShopItemResponse, ShoppingListItem};
 use components::{LoadOrCreateList, ShoppingList, Profile};
+use layout::ThemeChooserLayout::ThemeChooserLayout;
 
 const _STYLE: &str = manganis::mg!(file("public/tailwind.css"));
 
@@ -29,12 +30,13 @@ fn delete_item_url(list_uuid: &str, item_uuid: &str) -> String {
 
 #[derive(Routable, Clone)]
 enum Route {
-    #[route("/")]
-    LoadOrCreateList {},
-    #[route("/list/:uuid")]
-    ShoppingList { uuid: String },
-    #[route("/profile")]
-    Profile {},
+    #[layout(ThemeChooserLayout)]
+        #[route("/")]
+        LoadOrCreateList {},
+        #[route("/list/:uuid")]
+        ShoppingList { uuid: String },
+        #[route("/profile")]
+        Profile {},
 }
 
 fn app() -> Element {

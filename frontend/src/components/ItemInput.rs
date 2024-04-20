@@ -1,10 +1,9 @@
 use std::collections::HashMap;
-use dioxus::core_macro::{component, rsx};
-use dioxus::dioxus_core::Element;
-use dioxus::events::FormEvent;
-use dioxus::hooks::use_signal;
+
 use dioxus::prelude::*;
+
 use model::{PostShopItem, ShoppingListItem};
+
 use crate::post_item;
 
 #[component]
@@ -53,7 +52,7 @@ pub fn ItemInput(
     rsx! {
         div {
             class: "w-300 m-4 mt-16 rounded",
-            form { class: "grid grid-cols-3 gap-2",
+            form { class: "grid grid-cols-1 md:grid-cols-3 gap-2",
                 onsubmit: onsubmit,
                 div {
                     input {

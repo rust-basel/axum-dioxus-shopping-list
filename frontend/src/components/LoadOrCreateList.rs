@@ -1,10 +1,5 @@
-use dioxus::core_macro::{component, rsx};
-use dioxus::dioxus_core::Element;
-use dioxus::events::FormEvent;
-use dioxus::hooks::use_signal;
 use dioxus::prelude::*;
 use crate::{create_list, Route};
-use crate::layout::ThemeChooserLayout::ThemeChooserLayout;
 
 #[component]
 pub fn LoadOrCreateList() -> Element {
@@ -39,33 +34,33 @@ pub fn LoadOrCreateList() -> Element {
     };
 
     rsx! {
-        ThemeChooserLayout{
-            div{
-                class: "grid place-items-center min-h-500",
-                div{
-                    class: "flex justify-content",
-                    button{
-                        class: "btn m-4",
-                        onclick: on_create_list_click,
-                        "Create new List"
-                    }
-                    form {
-                        onsubmit: onloadsubmit,
-                        div {
-                            class: "flex flex-col",
-                            button{
-                                class: "btn m-4",
-                                r#type: "submit",
-                                "Load existing List"
-                            }
-                            input{
-                                class:"input input-bordered",
-                                r#type:"text",
-                                placeholder:"Type here the uuid",
-                                id: "uuid",
-                                name: "uuid",
-                                oninput: move |e| uuid.set(e.data.value())
-                            }
+        div{
+            class: "grid place-content-evently grid-cols-1 md:grid-cols-2 w-full gap-4",
+            div {
+                class: "card glass min-h-500 flex flex-col content-end gap-4 p-4",
+                button{
+                    class: "btn btn-primary",
+                    onclick: on_create_list_click,
+                    "Create new List"
+                }
+            }
+            div { class: "card glass min-h-500",
+                form {
+                    onsubmit: onloadsubmit,
+                    div {
+                        class: "flex flex-col gap-4 p-4",
+                        input{
+                            class:"input input-bordered",
+                            r#type:"text",
+                            placeholder:"Enter UUID here...",
+                            id: "uuid",
+                            name: "uuid",
+                            oninput: move |e| uuid.set(e.data.value())
+                        }
+                        button{
+                            class: "btn btn-primary",
+                            r#type: "submit",
+                            "Load existing List"
                         }
                     }
                 }
