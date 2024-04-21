@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+use crate::components::ItemDeleteButton::ItemDeleteButton;
 use dioxus::prelude::*;
 use model::ShoppingListItem;
-use crate::components::ItemDeleteButton::ItemDeleteButton;
+use std::collections::HashMap;
+
+use super::ListChanged::ListChanged;
 
 #[component]
 pub fn ListItem(
@@ -9,7 +11,7 @@ pub fn ListItem(
     list_uuid: String,
     item_uuid: String,
     posted_by: String,
-    current_items: Signal<HashMap<String, ShoppingListItem>>,
+    change_signal: Signal<ListChanged>,
 ) -> Element {
     rsx! {
         div {
@@ -24,7 +26,7 @@ pub fn ListItem(
             ItemDeleteButton{
                 list_uuid,
                 item_uuid,
-                current_items
+                change_signal
             }
         }
     }

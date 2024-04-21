@@ -6,44 +6,30 @@ use model::{PostShopItem, ShoppingListItem};
 
 use crate::post_item;
 
+use super::ListChanged::ListChanged;
+
 #[component]
-pub fn ItemInput(
-    list_uuid: String,
-    mut current_items: Signal<HashMap<String, ShoppingListItem>>,
-) -> Element {
+pub fn ItemInput(list_uuid: String, change_signal: Signal<ListChanged>) -> Element {
     let mut item = use_signal(|| "".to_string());
     let mut author = use_signal(|| "".to_string());
 
-    let onsubmit = move |evt: FormEvent| {
+    let onsubmit = move |_| {
         spawn({
             let list_uuid = list_uuid.clone();
             async move {
-                let item_name = evt.data.values()["item_name"]
-                    .first()
-                    .cloned()
-                    .unwrap_or_default();
-                let author = evt.data.values()["author"]
-                    .first()
-                    .cloned()
-                    .unwrap_or_default();
+                let item_name = item.read();
+                let author = author.read();
                 let response = post_item(
                     &list_uuid,
                     &PostShopItem {
-                        title: item_name,
-                        posted_by: author,
+                        title: item_name.to_string(),
+                        posted_by: author.to_string(),
                     },
                 )
-                    .await;
+                .await;
 
                 if let Ok(response) = response {
-                    current_items.write().insert(
-                        response.id.to_string(),
-                        ShoppingListItem {
-                            title: response.title,
-                            posted_by: response.posted_by,
-                            uuid: response.id,
-                        },
-                    );
+                    change_signal.write();
                 }
             }
         });

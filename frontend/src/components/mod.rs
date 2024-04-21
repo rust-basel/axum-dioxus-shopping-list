@@ -1,4 +1,5 @@
 mod ItemDeleteButton;
+mod ListChanged;
 pub use ItemDeleteButton::ItemDeleteButton;
 
 mod Profile;
@@ -18,3 +19,4 @@ pub use LoadOrCreateList::LoadOrCreateList;
 
 mod ShoppingListDisplay;
 pub use ShoppingListDisplay::ShoppingListDisplay;
+
