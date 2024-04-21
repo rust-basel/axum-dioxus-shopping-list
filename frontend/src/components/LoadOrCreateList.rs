@@ -1,5 +1,5 @@
-use dioxus::prelude::*;
 use crate::{create_list, Route};
+use dioxus::prelude::*;
 
 #[component]
 pub fn LoadOrCreateList() -> Element {
@@ -26,7 +26,7 @@ pub fn LoadOrCreateList() -> Element {
                 let response = create_list().await;
                 if let Ok(created_list) = response {
                     nav.push(Route::ShoppingList {
-                        uuid: created_list.id,
+                        uuid: created_list.uuid,
                     });
                 }
             }

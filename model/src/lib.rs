@@ -22,5 +22,5 @@ pub struct PostShopItemResponse {
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateListResponse {
-    pub id: String,
+    pub uuid: String,
 }

@@ -34,7 +34,7 @@ pub async fn create_shopping_list(State(state): State<SharedData>) -> impl IntoR
     let uuid = Uuid::new_v4().to_string();
     state.write().unwrap().create_list(uuid.clone());
 
-    Json(CreateListResponse { id: uuid })
+    Json(CreateListResponse { uuid })
 }
 
 pub async fn create_shopping_item(
