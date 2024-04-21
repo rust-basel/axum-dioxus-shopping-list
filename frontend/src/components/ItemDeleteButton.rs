@@ -6,11 +6,13 @@ use model::ShoppingListItem;
 
 use crate::delete_item;
 
+use super::ListChanged::ListChanged;
+
 #[component]
 pub fn ItemDeleteButton(
     list_uuid: String,
     item_uuid: String,
-    mut current_items: Signal<HashMap<String, ShoppingListItem>>,
+    change_signal: Signal<ListChanged>,
 ) -> Element {
     let onclick = move |_| {
         spawn({
@@ -19,7 +21,7 @@ pub fn ItemDeleteButton(
             async move {
                 let response = delete_item(&list_uuid, &item_uuid).await;
                 if response.is_ok() {
-                    current_items.write().remove(&item_uuid);
+                    change_signal.write();
                 }
             }
         });

@@ -1,22 +1,28 @@
-use std::collections::HashMap;
+use crate::components::ListItem::ListItem;
 use dioxus::prelude::*;
 use model::ShoppingListItem;
-use crate::components::ListItem::ListItem;
+use std::collections::HashMap;
+
+use super::ListChanged::ListChanged;
 
 #[component]
-pub fn ShoppingListDisplay(list: Signal<HashMap<String, ShoppingListItem>>, uuid: String) -> Element {
+pub fn ShoppingListDisplay(
+    list: Vec<ShoppingListItem>,
+    uuid: String,
+    change_signal: Signal<ListChanged>,
+) -> Element {
     rsx! {
         {
-        list().iter().map(|(k,v)| {
+        list.iter().map(|item| {
             rsx!{
                 li {
-                    key: "{k}",
+                    key: "{item.uuid}",
                     ListItem {
-                        display_name: v.title.clone(),
-                        posted_by: v.posted_by.clone(),
+                        display_name: item.title.clone(),
+                        posted_by: item.posted_by.clone(),
                         list_uuid: uuid.clone(),
-                        item_uuid: k.clone(),
-                        current_items: list.clone()
+                        item_uuid: item.uuid.clone(),
+                        change_signal
                     }
                 }
             }

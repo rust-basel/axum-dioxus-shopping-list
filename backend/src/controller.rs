@@ -13,27 +13,9 @@ pub async fn get_items(
     Path(uuid): Path<Uuid>,
     State(state): State<SharedData>,
 ) -> impl IntoResponse {
-    let mut result = example_list();
-    let mut items: Vec<ShoppingListItem> = state.read().unwrap().as_vec(uuid.to_string());
+    let items: Vec<ShoppingListItem> = state.read().unwrap().as_vec(uuid.to_string());
 
-    result.append(&mut items);
-
-    Json(result)
-}
-
-fn example_list() -> Vec<ShoppingListItem> {
-    vec![
-        ShoppingListItem {
-            title: String::from("Coffee"),
-            posted_by: String::from("Roland"),
-            uuid: "6a363dc3-b34c-43e3-8ea0-919b25b57c43".to_string(),
-        },
-        ShoppingListItem {
-            title: String::from("Tomato seeds"),
-            posted_by: String::from("Tania"),
-            uuid: "4e5548aa-4525-45c4-82c9-61d8919f940d".to_string(),
-        },
-    ]
+    Json(items)
 }
 
 pub async fn delete_shopping_item(
